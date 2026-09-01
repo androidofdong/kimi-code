@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconExternalLink } from "@tabler/icons-react";
 import { useApprovalStore } from "@/stores";
+import { bridge } from "@/services";
 import { DisplayBlocks } from "./DisplayBlocks";
 import { cn } from "@/lib/utils";
-import type { ApprovalResponse } from "shared/legacy-sdk";
+import type { ApprovalResponse, MarkdownBlock } from "shared/legacy-sdk";
 
 export function ApprovalDialog() {
   const { pending, respondToRequest } = useApprovalStore();
@@ -12,16 +13,17 @@ export function ApprovalDialog() {
 
   const req = pending[0];
 
-  // Auto-expand if there's a diff block (code change)
+  // Auto-expand if there's a diff block (code change) or markdown block (plan review)
   useEffect(() => {
     if (req) {
-      const hasDiff = req.display?.some((b) => b.type === "diff") ?? false;
-      setExpanded(hasDiff);
+      const hasRichContent = req.display?.some((b) => b.type === "diff" || b.type === "markdown") ?? false;
+      setExpanded(hasRichContent);
     }
   }, [req?.id]);
 
   if (!req) return null;
   const hasDisplay = req.display && req.display.length > 0;
+  const planPath = req.display?.find((b): b is MarkdownBlock => b.type === "markdown")?.path;
 
   const handleResponse = async (response: ApprovalResponse) => {
     await respondToRequest(req.id, response);
@@ -40,11 +42,22 @@ export function ApprovalDialog() {
       <div className="p-2 space-y-2 flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between shrink-0">
           <div className="text-xs font-semibold text-foreground">Allow this {req.action.toLowerCase()}?</div>
-          {hasDisplay && (
-            <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-muted rounded transition-colors">
-              {expanded ? <IconChevronDown className="size-4 text-muted-foreground" /> : <IconChevronUp className="size-4 text-muted-foreground" />}
-            </button>
-          )}
+          <div className="flex items-center">
+            {planPath && (
+              <button
+                onClick={() => void bridge.openPlanFile(planPath)}
+                title="Open full plan in editor"
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
+                <IconExternalLink className="size-4 text-muted-foreground" />
+              </button>
+            )}
+            {hasDisplay && (
+              <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-muted rounded transition-colors">
+                {expanded ? <IconChevronDown className="size-4 text-muted-foreground" /> : <IconChevronUp className="size-4 text-muted-foreground" />}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="text-xs text-foreground/90 break-all leading-relaxed bg-muted/30 py-2 px-2 rounded shrink-0 max-h-20 overflow-y-auto font-mono">{req.description}</div>

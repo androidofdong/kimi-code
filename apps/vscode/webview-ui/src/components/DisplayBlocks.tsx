@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { DisplayBlock, DiffBlock, TodoBlock, BriefBlock, ShellBlock } from "shared/legacy-sdk";
+import type { DisplayBlock, DiffBlock, TodoBlock, BriefBlock, MarkdownBlock, ShellBlock } from "shared/legacy-sdk";
 import { cn } from "@/lib/utils";
+import { Markdown } from "./Markdown";
 import * as Diff from "diff";
 
 function useIsDark(): boolean {
@@ -157,6 +158,18 @@ export function BriefBlockView({ block }: BriefBlockProps) {
   return <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-2 py-1.5">{block.text}</div>;
 }
 
+interface MarkdownBlockProps {
+  block: MarkdownBlock;
+}
+
+export function MarkdownBlockView({ block }: MarkdownBlockProps) {
+  return (
+    <div className="text-xs border border-border rounded-md px-3 py-2 bg-muted/30 overflow-x-auto [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_pre]:text-[11px]">
+      <Markdown content={block.text} />
+    </div>
+  );
+}
+
 interface ShellBlockProps {
   block: ShellBlock;
   maxHeight?: string;
@@ -201,6 +214,8 @@ export function DisplayBlockView({ block, maxHeight }: DisplayBlockViewProps) {
       return <TodoBlockView block={block as TodoBlock} />;
     case "brief":
       return <BriefBlockView block={block as BriefBlock} />;
+    case "markdown":
+      return <MarkdownBlockView block={block as MarkdownBlock} />;
     default:
       return null;
   }

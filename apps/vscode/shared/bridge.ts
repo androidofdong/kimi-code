@@ -50,6 +50,7 @@ export const Methods = {
   GetProjectFiles: "getProjectFiles",
   PickMedia: "pickMedia",
   OpenFile: "openFile",
+  OpenPlanFile: "openPlanFile",
   CheckFileExists: "checkFileExists",
   CheckFilesExist: "checkFilesExist",
   OpenFileDiff: "openFileDiff",
@@ -207,6 +208,7 @@ function validateParams(method: RpcMethod, params: unknown): boolean {
           || (Number.isInteger(params["maxCount"]) && (params["maxCount"] as number) >= 0))
         && isOptionalType(params["includeVideo"], "boolean");
     case Methods.OpenFile:
+    case Methods.OpenPlanFile:
     case Methods.OpenFileDiff:
     case Methods.CheckFileExists:
     case Methods.GetImageDataUri:
