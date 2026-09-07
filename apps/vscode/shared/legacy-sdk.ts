@@ -19,6 +19,12 @@ export interface BriefBlock {
   text: string;
 }
 
+export interface MarkdownBlock {
+  type: 'markdown';
+  text: string;
+  path?: string;
+}
+
 export interface DiffBlock {
   type: 'diff';
   path: string;
@@ -43,7 +49,7 @@ export interface UnknownBlock {
   [key: string]: unknown;
 }
 
-export type DisplayBlock = BriefBlock | DiffBlock | TodoBlock | ShellBlock | UnknownBlock;
+export type DisplayBlock = BriefBlock | MarkdownBlock | DiffBlock | TodoBlock | ShellBlock | UnknownBlock;
 
 export interface ToolCall {
   type: 'function';

@@ -92,6 +92,14 @@ const openFile: Handler<FilePathParams, { ok: boolean }> = async ({ filePath }, 
   return { ok: true };
 };
 
+// Plan files live under the Kimi home directory, outside the workspace, so
+// they bypass the workspace-containment check that openFile enforces.
+const openPlanFile: Handler<FilePathParams, { ok: boolean }> = async ({ filePath }) => {
+  if (!path.isAbsolute(filePath)) return { ok: false };
+  await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(filePath));
+  return { ok: true };
+};
+
 const openFileDiff: Handler<FilePathParams, { ok: boolean }> = async ({ filePath }, ctx) => {
   const sessionId = ctx.getSessionId();
   const resolved = await resolveExistingWorkspaceFile(ctx.requireWorkDirUri(), filePath);
@@ -197,6 +205,7 @@ export const fileHandlers: Record<string, Handler<any, any>> = {
   [Methods.GetProjectFiles]: getProjectFiles,
   [Methods.PickMedia]: pickMedia,
   [Methods.OpenFile]: openFile,
+  [Methods.OpenPlanFile]: openPlanFile,
   [Methods.OpenFileDiff]: openFileDiff,
   [Methods.TrackFiles]: trackFiles,
   [Methods.ClearTrackedFiles]: clearTrackedFiles,

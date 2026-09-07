@@ -24,8 +24,12 @@ export function describeToolDisplay(display: ToolInputDisplay): string {
       return display.description;
     case "task_stop":
       return display.task_description;
-    case "plan_review":
-      return display.plan;
+    case "plan_review": {
+      const heading = display.plan.split("\n").find((line) => /^#\s+\S/.test(line.trim()));
+      return heading === undefined
+        ? "Review the proposed plan"
+        : `Presenting plan: ${heading.trim().replace(/^#+\s+/, "")}`;
+    }
     case "goal_start":
       return display.objective;
     case "generic":
@@ -61,13 +65,14 @@ export function toLegacyDisplay(display: ToolInputDisplay): DisplayBlock[] {
           status: item.status === "done" || item.status === "in_progress" ? item.status : "pending",
         })),
       }];
+    case "plan_review":
+      return [{ type: "markdown", text: display.plan, path: display.path }];
     case "search":
     case "url_fetch":
     case "agent_call":
     case "skill_call":
     case "task":
     case "task_stop":
-    case "plan_review":
     case "goal_start":
     case "generic":
       return [{ type: "brief", text: describeToolDisplay(display) }];

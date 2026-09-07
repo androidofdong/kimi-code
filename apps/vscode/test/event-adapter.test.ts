@@ -12,6 +12,7 @@ import {
   adaptSdkEvent,
   createEventAdapterState,
 } from '../src/runtime/event-adapter';
+import { describeToolDisplay, toLegacyDisplay } from '../src/runtime/tool-display';
 
 describe('event adapter (projects SDK events into the legacy Webview contract)', () => {
   it('emits the pending input when a main-agent turn starts', () => {
@@ -566,5 +567,27 @@ describe('event adapter (projects SDK events into the legacy Webview contract)',
 
   it('classifies a missing Windows Git Bash runtime as a preflight error', () => {
     expect(isPreflightError('shell.git_bash_not_found')).toBe(true);
+  });
+});
+
+describe('tool display (projects SDK tool input displays into the legacy Webview contract)', () => {
+  const plan = '# My Plan\n\n## Steps\n\n1. Do the thing\n';
+
+  it('projects a plan review into a markdown block carrying the full plan and path', () => {
+    expect(toLegacyDisplay({ kind: 'plan_review', plan, path: '/tmp/plan.md' })).toEqual([
+      { type: 'markdown', text: plan, path: '/tmp/plan.md' },
+    ]);
+  });
+
+  it('describes a plan review with its first heading instead of the full plan', () => {
+    expect(describeToolDisplay({ kind: 'plan_review', plan, path: '/tmp/plan.md' })).toBe(
+      'Presenting plan: My Plan',
+    );
+  });
+
+  it('falls back to a generic summary when the plan has no heading', () => {
+    expect(
+      describeToolDisplay({ kind: 'plan_review', plan: 'no heading here', path: '/tmp/plan.md' }),
+    ).toBe('Review the proposed plan');
   });
 });
