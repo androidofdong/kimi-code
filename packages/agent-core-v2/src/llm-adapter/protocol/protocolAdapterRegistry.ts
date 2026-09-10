@@ -5,7 +5,7 @@ import { UNKNOWN_CAPABILITY, toLlmCapability, type ModelCapability } from '../co
 import type { ModelThinkingMetadata } from '#human/llm/thinking';
 import type { ProviderMediaContribution } from '#human/llm/media/upload';
 import type { LlmModel } from '#human/llm/model';
-import type { ProtocolBase, ProtocolName } from '#human/llm/protocol/base';
+import type { ProtocolBase } from '#human/llm/protocol/base';
 import type { ProtocolTrait } from '#human/llm/protocol/trait';
 import { anthropicBase, anthropicBetaBase } from '#human/llm/requester/bases/anthropic/requester';
 import {
@@ -27,7 +27,7 @@ import {
   vertexEndpointTrait,
 } from '../provider/provider-definition';
 
-import { IProtocolAdapterRegistry, type ExplainedCapability, type Protocol } from './protocol';
+import { IProtocolAdapterRegistry, type Protocol } from './protocol';
 import { getProtocolBase, listProtocolBases, type ProtocolBaseId } from './protocol-base';
 
 const vertexGenAIBase = createGoogleGenAIBase({ vertexai: true });
@@ -125,14 +125,6 @@ export class ProtocolAdapterRegistry implements IProtocolAdapterRegistry {
   }
 
   resolveCapability(protocol: Protocol, modelName: string, providerType?: string): ModelCapability {
-    return this.explainCapability(protocol, modelName, providerType).capability;
-  }
-
-  explainCapability(
-    protocol: Protocol,
-    modelName: string,
-    providerType?: string,
-  ): ExplainedCapability {
     const identity = this.resolveAdapterIdentity(protocol, providerType);
     let traitCapability: ModelCapability | undefined;
     for (const { trait } of identity.traits) {
@@ -143,26 +135,13 @@ export class ProtocolAdapterRegistry implements IProtocolAdapterRegistry {
       }
     }
     if (traitCapability !== undefined) {
-      return {
-        capability: traitCapability,
-        source: {
-          kind: 'builtin',
-          detail: `trait capability hook (provider '${providerType ?? 'unregistered'}')`,
-        },
-      };
+      return traitCapability;
     }
-
     const baseCapability = getProtocolBase(identity.baseId)?.base.capability?.(modelName);
     if (baseCapability !== undefined) {
-      return {
-        capability: toV2Capability(baseCapability),
-        source: { kind: 'builtin', detail: `protocol base '${identity.baseId}' catalog` },
-      };
+      return toV2Capability(baseCapability);
     }
-    return {
-      capability: UNKNOWN_CAPABILITY,
-      source: { kind: 'none', detail: 'no capability source knew this model' },
-    };
+    return UNKNOWN_CAPABILITY;
   }
 
   resolve(model: Model): ResolvedLlmModel {
@@ -182,20 +161,7 @@ export class ProtocolAdapterRegistry implements IProtocolAdapterRegistry {
       alwaysThinking: model.alwaysThinking,
       adaptiveThinking: model.providerOptions?.adaptiveThinking,
     };
-    return { requester, protocol: protocolNameFor(model, route), model: llmModel, media: route.media };
-  }
-}
-
-function protocolNameFor(model: Model, route: AdapterRoute): ProtocolName {
-  switch (model.protocol) {
-    case 'openai':
-      return 'openai';
-    case 'openai_responses':
-      return 'openai_responses';
-    case 'anthropic':
-      return route.base === anthropicBetaBase ? 'anthropic_beta' : 'anthropic';
-    case 'google-genai':
-      return route.base === vertexGenAIBase ? 'google-vertex' : 'google-genai';
+    return { requester, protocol: model.protocol, model: llmModel, media: route.media };
   }
 }
 

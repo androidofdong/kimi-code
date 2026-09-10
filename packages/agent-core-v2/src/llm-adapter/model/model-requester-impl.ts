@@ -4,12 +4,12 @@ import { performance, type EventLoopUtilization } from 'node:perf_hooks';
 
 import { AsyncEventQueue } from '#/_base/asyncEventQueue';
 import type { LlmErrorMessage } from '#human/llm/errors';
-import type { FinishInfo } from '#human/llm/finish-reason';
+import { emptyResponseError } from '#human/llm/empty-response';
+import { NO_FINISH, type FinishInfo } from '#human/llm/finish-reason';
 import type { ProviderMediaContribution, VideoUploadInput } from '#human/llm/media/upload';
 import { createMessageAccumulator, type VideoURLPart } from '#human/llm/message';
 import type { LlmModel } from '#human/llm/model';
 import type { ProtocolName } from '#human/llm/protocol/base';
-import { withEmptyResponseGuard } from '#human/llm/requester/empty-response';
 import {
   mergeRequestHeaders,
   type ExtraParams,
@@ -83,9 +83,7 @@ export class ModelRequesterImpl implements ModelRequester {
 
   private requesterFor(resolved: ResolvedLlmModel): LlmRequester {
     if (this.cachedRequester === undefined) {
-      this.cachedRequester = withEmptyResponseGuard(
-        withAuth(throwToEvent(resolved.requester), this.credentialSource),
-      );
+      this.cachedRequester = withAuth(throwToEvent(resolved.requester), this.credentialSource);
     }
     return this.cachedRequester;
   }
@@ -190,12 +188,12 @@ export class ModelRequesterImpl implements ModelRequester {
             requestSentAt = now;
             return;
           }
-          case 'llm.headers': {
+          case 'llm.streaming.headers': {
             traceId = traceIdFromHeadersRecord(event.headers);
             params?.onTraceId?.(traceId);
             return;
           }
-          case 'llm.delta': {
+          case 'llm.streaming.part': {
             const arrivedAt = Date.now();
             if (firstChunkAt === undefined) {
               firstChunkAt = arrivedAt;
@@ -209,15 +207,15 @@ export class ModelRequesterImpl implements ModelRequester {
             clientConsumeMs += lastResumeAt - arrivedAt;
             return;
           }
-          case 'llm.usage': {
+          case 'llm.streaming.usage': {
             usage = mergeUsagePatch(usage, event.usage);
             return;
           }
-          case 'llm.finish': {
+          case 'llm.streaming.finish': {
             finish = event.finish;
             return;
           }
-          case 'llm.message-id': {
+          case 'llm.streaming.message_id': {
             messageId = event.messageId;
             return;
           }
@@ -242,6 +240,11 @@ export class ModelRequesterImpl implements ModelRequester {
 
     if (failed !== undefined) {
       throw errorFromLlmMessage(failed);
+    }
+
+    const emptyError = emptyResponseError(accumulator.finish(), config.model, finish ?? NO_FINISH);
+    if (emptyError !== null) {
+      throw errorFromLlmMessage(emptyError);
     }
 
     if (usage !== undefined) {
@@ -332,10 +335,8 @@ function samplingExtraParams(
     case 'openai_responses':
       return { responses: { temperature, top_p: topP } };
     case 'anthropic':
-    case 'anthropic_beta':
       return { anthropic: { temperature, top_p: topP } };
     case 'google-genai':
-    case 'google-vertex':
       return { googleGenai: { temperature, topP } };
   }
 }

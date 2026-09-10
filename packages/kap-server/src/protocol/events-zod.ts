@@ -490,16 +490,6 @@ export const agentPhaseSchema = z.discriminatedUnion('kind', [
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('streaming'),
-    turnId: z.number(),
-    step: z.number(),
-    stepId: z.string(),
-    stream: z.enum(['assistant', 'thinking', 'tool_call']),
-    toolCallId: z.string().optional(),
-    toolName: z.string().optional(),
-    since: z.number(),
-  }),
-  z.object({
     kind: z.literal('tool_call'),
     turnId: z.number(),
     step: z.number(),
@@ -581,6 +571,11 @@ export const sessionCreatedEventSchema = z.object({
 
 export const sessionArchivedEventSchema = z.object({
   type: z.literal('event.session.archived'),
+  workspace_id: z.string().min(1),
+});
+
+export const sessionDeletedEventSchema = z.object({
+  type: z.literal('event.session.deleted'),
   workspace_id: z.string().min(1),
 });
 
@@ -1056,6 +1051,7 @@ export const agentEventSchema = z.discriminatedUnion('type', [
   sessionMetaUpdatedEventSchema,
   sessionCreatedEventSchema,
   sessionArchivedEventSchema,
+  sessionDeletedEventSchema,
   workspaceCreatedEventSchema,
   workspaceUpdatedEventSchema,
   workspaceDeletedEventSchema,
